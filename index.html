@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuaderno de Bitácora Dulca</title>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyD6qmIeuWD0355xO-5wQb95xWPiAi2abFM",
+          authDomain: "dulca-824bd.firebaseapp.com",
+          projectId: "dulca-824bd",
+          storageBucket: "dulca-824bd.appspot.com",
+          messagingSenderId: "1075287348336",
+          appId: "1:1075287348336:web:5dfc333288c972ceb8d0b5",
+          measurementId: "G-4R483RB9ZS"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.addEntry = async function() {
+            let content = document.getElementById('entryContent').value.trim();
+            let author = document.getElementById('authorSelect').value;
+            let button = document.getElementById('saveButton');
+            
+            if (!content || !author) {
+                alert("Debes escribir un comentario y seleccionar un autor.");
+                return;
+            }
+            
+            button.classList.add('clicked');
+            setTimeout(() => {
+                button.classList.remove('clicked');
+            }, 200);
+            
+            try {
+                await addDoc(collection(db, "bitacora"), {
+                    content: content,
+                    author: author,
+                    date: new Date().toLocaleString(),
+                    dateOnly: new Date().toLocaleDateString(),
+                    timestamp: new Date()
+                });
+                document.getElementById('entryContent').value = '';
+                document.getElementById('authorSelect').value = '';
+                loadEntries();
+            } catch (error) {
+                console.error("Error al guardar: ", error);
+            }
+        }
+
+        window.loadEntries = async function() {
+            const querySnapshot = await getDocs(query(collection(db, "bitacora"), orderBy("timestamp", "desc")));
+            let entriesDiv = document.getElementById('entries');
+            entriesDiv.innerHTML = '';
+            let groupedEntries = {};
+
+            querySnapshot.forEach(doc => {
+                let entry = doc.data();
+                if (!groupedEntries[entry.dateOnly]) {
+                    groupedEntries[entry.dateOnly] = [];
+                }
+                groupedEntries[entry.dateOnly].push(entry);
+            });
+
+            Object.keys(groupedEntries).forEach(date => {
+                let dateDiv = document.createElement('div');
+                dateDiv.innerHTML = `<h3>${date}</h3>`;
+                entriesDiv.appendChild(dateDiv);
+
+                groupedEntries[date].forEach(entry => {
+                    let div = document.createElement('div');
+                    div.classList.add('entry');
+                    div.innerHTML = `<div class='date'>${entry.date}</div><p><strong>${entry.author}:</strong> ${entry.content}</p>`;
+                    entriesDiv.appendChild(div);
+                });
+            });
+        }
+
+        window.searchEntries = function() {
+            let query = document.getElementById('search').value.toLowerCase();
+            let entries = document.querySelectorAll('.entry');
+            
+            entries.forEach(entry => {
+                entry.style.display = entry.innerText.toLowerCase().includes(query) ? 'block' : 'none';
+            });
+        }
+
+        window.onload = loadEntries;
+    </script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #f9f9f9; }
+        .header-container { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+        .logo { margin-left: 40px; width: 100px; }
+        textarea, select, button, input#search { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #f28b82; border: none; color: white; font-weight: bold; cursor: pointer; transition: transform 0.1s ease-in-out; }
+        button.clicked { transform: scale(0.95); background-color: #d32f2f; }
+        .entry-container { background: white; padding: 10px; border-radius: 5px; margin-top: 10px; }
+        .entry { border-left: 5px solid #f28b82; padding: 10px; margin-bottom: 5px; background: #fff3f2; border-radius: 5px; }
+        .date { font-size: 0.8em; color: gray; }
+        h2 { color: #d32f2f; margin: 0; }
+        h3 { border-bottom: 2px solid #d32f2f; padding-bottom: 5px; color: #d32f2f; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="header-container">
+        <h2>Cuaderno de Bitácora Supervisores</h2>
+        <img src="https://dulca.es/wp-content/uploads/2022/03/logo.png" alt="Logo" class="logo">
+    </div>
+    <textarea id="entryContent" placeholder="Escribe aquí tu comentario..."></textarea>
+    <select id="authorSelect">
+        <option value="" selected disabled>Selecciona un autor</option>
+        <option value="Toñi">Toñi</option>
+        <option value="Mario">Mario</option>
+        <option value="Noelia">Noelia</option>
+        <option value="Jaime">Jaime</option>
+        <option value="Gonzalo">Gonzalo</option>
+        <option value="Otro">Otro</option>
+    </select>
+    <button id="saveButton" onclick="addEntry()">Guardar comentario</button>
+    <h3>Histórico</h3>
+    <input type="text" id="search" placeholder="Buscar por palabra clave..." oninput="searchEntries()">
+    <div id="entries" class="entry-container"></div>
+</body>
+</html>
